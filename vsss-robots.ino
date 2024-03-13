@@ -1,4 +1,3 @@
-#include "config.h"
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <cstdlib>
@@ -15,8 +14,10 @@ const int motorBenable = 32;
 const int channelB = 1;
 
 const int delay_time = 25;
-
 //Dado recebido pelo MQTT
+//char data = '0';
+
+// char data[8] = "r196025";
 char data[15];
 
 // Criar variáveis para armazenar partes da string
@@ -28,6 +29,7 @@ char commandValue;
 int velocityValue, delayValue;
 float angle_value, distance_value;
 
+// Informações da rede Wi-Fi
 
 //PID
 int max_velocity = 255; 
@@ -47,14 +49,17 @@ int limitador(int velocidade);
 float k_dist[3] = {8.5,-8.8,0.4};
 float k_angle[3] = {7,-7.6,0.7};
 
-// Informações da rede Wi-Fi
-const char *ssid = WIFI_SSID;
-const char *password = WIFI_PASSWORD;
+
+const char *ssid = "IFAL";
+const char *password = "ifalpalmeira";
+
+//const char *ssid = "moto e(7) 2539";
+//const char *password = "ciclismo";
 
 // Informações do broker MQTT
-const char *mqttBroker = MQTT_BROKER;
-const int mqttPort = MQTT_PORT;
-const char *mqttTopic = MQTT_TOPIC;
+const char *mqttBroker = "broker.hivemq.com";
+const int mqttPort = 1883;
+const char *mqttTopic = "vsss-ifal-pin/robots";
 
 // Objeto para a conexão Wi-Fi
 WiFiClient espClient;
@@ -319,12 +324,15 @@ void PID(float angle_value, float distance_value, float kp_angle, float kp_dist)
 void controle(float angle_value, float distance_value){
 
   // 𝑘𝜌 > 0; 𝑘𝛽 < 0; 𝑘𝛼 − 𝑘𝛽 > 0
-  float kr = 1.5;
-  float ka = 3;
-  float kb = -4;
+  float kr = 6;
+  float ka = 10;
+  float kb = -10;
+
+
+  float pi = 3.14159;
 
   float rho = distance_value;
-  float alpha = angle_value;
+  float alpha = angle_value*pi/180;
   float beta = -alpha;
   
   if(rho > 5){
@@ -332,11 +340,11 @@ void controle(float angle_value, float distance_value){
       float v = kr * rho;
       float w = ka*alpha + kb*beta;
 
-      float wr = v + w/2;
-      float wl = v - w/2;
+      float wl = v + w/2;
+      float wr = v - w/2;
 
-      wr = limitador(wr);
-      wl = limitador(wl);
+      wl = limitador(wl/1.1);
+      wr = limitador(wr/1.1);
 
       move(wr,wl);
   } else{
