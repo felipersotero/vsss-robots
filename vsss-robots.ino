@@ -1,6 +1,7 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <cstdlib>
+#include "config.h"
 
 // Define os pinos conectados à ponte H
 const int motorA1 = 2;
@@ -14,22 +15,22 @@ const int motorBenable = 32;
 const int channelB = 1;
 
 const int delay_time = 25;
-//Dado recebido pelo MQTT
-//char data = '0';
 
-// char data[8] = "r196025";
-char data[15];
+//Dado recebido pelo MQTT
+char data[30];
 
 // Criar variáveis para armazenar partes da string
 char data_command[2];
 char data_angle[8];
 char data_distance[7];
+char data_kr[6];
+char data_ka[6];
+char data_kb[6];
 
 char commandValue;
 int velocityValue, delayValue;
 float angle_value, distance_value;
-
-// Informações da rede Wi-Fi
+float kr, ka, kb;
 
 //PID
 int max_velocity = 255; 
@@ -49,17 +50,14 @@ int limitador(int velocidade);
 float k_dist[3] = {8.5,-8.8,0.4};
 float k_angle[3] = {7,-7.6,0.7};
 
-
-const char *ssid = "IFAL";
-const char *password = "ifalpalmeira";
-
-//const char *ssid = "moto e(7) 2539";
-//const char *password = "ciclismo";
+//Informações da rede Wi-Fi
+const char *ssid = WIFI_SSID_CASA_F;
+const char *password = WIFI_PASSWORD_CASA_F;
 
 // Informações do broker MQTT
-const char *mqttBroker = "broker.hivemq.com";
-const int mqttPort = 1883;
-const char *mqttTopic = "vsss-ifal-pin/robots";
+const char *mqttBroker = MQTT_BROKER;
+const int mqttPort = MQTT_PORT;
+const char *mqttTopic = MQTT_TOPIC;
 
 // Objeto para a conexão Wi-Fi
 WiFiClient espClient;
@@ -143,16 +141,18 @@ void loop() {
       // Atualiza o tempo da última iteração para o tempo atual
       timePrev = millis();
 
-      // readData(commandValue, velocityValue, delayValue);
-      readData(commandValue, angle_value, distance_value);
-
+      readData(commandValue, angle_value, distance_value, kr, ka, kb);
 
       Serial.println("Executando ação!");
-      Serial.println(data_command);
-      Serial.println(data_command[0]);
+      // Serial.println(data_command);
+      // Serial.println(data_command[0]);
+      // c+045.25025.13+1.00+2.00+3.00
       Serial.println(commandValue);
       Serial.println(angle_value);
       Serial.println(distance_value);
+      Serial.println(kr);
+      Serial.println(ka);
+      Serial.println(kb);
 
       if(commandValue == 's'){
         stopMotors();
@@ -160,14 +160,24 @@ void loop() {
         delay(100);
       } else{
         // Chama a função PID
-        controle(angle_value, distance_value);        
+        controle(angle_value, distance_value, kr, ka, kb);        
         //PID(angle_value, distance_value , kp_angle, kp_dist);        
       }
 
   }
 }
 
-void readData(char &commandValue, float &angle_value, float &distance_value){
+void readData(char &commandValue, float &angle_value, float &distance_value, float &kr, float &ka, float &kb){
+  
+  // c+045.25025.13+1.00+2.00+3.00
+  // c+aaa.aaddd.dd+k.kk+k.kk+k.kk
+  
+  for(int i = 0; i < strlen(data); i ++){
+    Serial.print(i);
+    Serial.print(" - ");
+    Serial.println(data[i]);
+  }
+
   strncpy(data_command, data, 1);
   data_command[1] = '\0';
 
@@ -177,12 +187,26 @@ void readData(char &commandValue, float &angle_value, float &distance_value){
   strncpy(data_distance, data + 8, 6);
   data_distance[6] = '\0';
 
+  strncpy(data_kr, data + 14, 5);
+  data_kr[5] = '\0';
+
+  strncpy(data_ka, data + 19, 5);
+  data_ka[5] = '\0';
+
+  strncpy(data_kb, data + 24, 5);
+  data_kb[5] = '\0';
+  
   // Converter as partes para inteiros
   commandValue = data_command[0];
   angle_value = atof(data_angle);
   distance_value = atof(data_distance);
+  kr = atof(data_kr);
+  ka = atof(data_ka);
+  kb = atof(data_kb);
 
-
+// kr = '+0.00'
+// ka = '+0.00'
+// kb = '+0.00'
 
 }
 
@@ -321,14 +345,13 @@ void PID(float angle_value, float distance_value, float kp_angle, float kp_dist)
 }
 
 
-void controle(float angle_value, float distance_value){
+void controle(float angle_value, float distance_value, float kr, float ka, float kb){
 
   // 𝑘𝜌 > 0; 𝑘𝛽 < 0; 𝑘𝛼 − 𝑘𝛽 > 0
-  float kr = 6;
-  float ka = 10;
-  float kb = -10;
-
-
+  // float kr = 6;
+  // float ka = 10;
+  // float kb = -10;
+  
   float pi = 3.14159;
 
   float rho = distance_value;
