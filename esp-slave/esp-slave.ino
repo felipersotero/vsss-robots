@@ -8,6 +8,25 @@
 #include <WiFi.h>
 #include <cstdlib>
 
+// Define os pinos conectados à ponte H
+const int motorA1 = 2;
+const int motorA2 = 4;
+const int motorAenable = 15;
+const int channelA = 0;
+
+const int motorB1 = 25;
+const int motorB2 = 26;
+const int motorBenable = 32;
+const int channelB = 1;
+
+// Variáveis para armazenar fatias das strings de dados
+char data_command[2];
+char data_wr[5];
+char data_wl[5];
+
+char command_value;
+int wr, wl;
+
 char aux[9];
 
 // Estrutura de dados
@@ -23,14 +42,32 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
   memcpy(&myData, incomingData, sizeof(myData));
 
   // aux = myData.a;
-
   strncpy(aux, myData.data, sizeof(myData.data));
 
-  if(strcmp(aux, "f+255+255") == 0){
-    digitalWrite(2,HIGH);
-  }else if(strcmp(aux, "s+255+255") == 0){
-    digitalWrite(2,LOW);
+  // Fatiando dados
+  strncpy(data_command, aux, 1);
+  data_command[1] = '\0';
+
+  strncpy(data_wr, aux + 1, 4);
+  data_wr[4] = '\0';
+
+  strncpy(data_wl, aux + 5, 4);
+  data_wl[4] = '\0';
+
+  command_value = data_command[0];
+  wr = atoi(data_wr);
+  wl = atoi(data_wl);
+
+  Serial.println(command_value);
+  Serial.println(wr);
+  Serial.println(wl);
+
+  if(command_value == 'f'){
+    move(wr,wl);
+  } else{
+    stopMotors();
   }
+
 }
 
 void move(int speedA, int speedB) {
@@ -73,6 +110,13 @@ void move(int speedA, int speedB) {
   }
 }
 
+void stopMotors() {
+  digitalWrite(motorA1, LOW);
+  digitalWrite(motorA2, LOW);
+  digitalWrite(motorB1, LOW);
+  digitalWrite(motorB2, LOW);
+}
+
 void setup() {
   // Inicialização da comunicação serial
   Serial.begin(115200);
@@ -90,7 +134,17 @@ void setup() {
   esp_now_register_recv_cb(OnDataRecv);
 
   //Definindo pinos
-  pinMode(2,OUTPUT);
+  pinMode(motorA1, OUTPUT);
+  pinMode(motorA2, OUTPUT);
+  pinMode(motorB1, OUTPUT);
+  pinMode(motorB2, OUTPUT);
+
+  ledcSetup(channelA, 5000, 8);
+  ledcAttachPin(motorAenable, channelA);
+  ledcSetup(channelB, 5000, 8);
+  ledcAttachPin(motorBenable, channelB);
+
+  stopMotors();
 }
  
 void loop() {
