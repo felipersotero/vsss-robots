@@ -51,8 +51,8 @@ float k_dist[3] = {8.5,-8.8,0.4};
 float k_angle[3] = {7,-7.6,0.7};
 
 //Informações da rede Wi-Fi
-const char *ssid = WIFI_SSID_CASA_F;
-const char *password = WIFI_PASSWORD_CASA_F;
+const char *ssid = WIFI_SSID_IFAL;
+const char *password = WIFI_PASSWORD_IFAL;
 
 // Informações do broker MQTT
 const char *mqttBroker = MQTT_BROKER;
